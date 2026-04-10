@@ -5,8 +5,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
-
-	"github.com/benmunyasya/dbbackuputility/internal/db"
+    "github.com/benmunyasya/dbbackuputility/internal/db"
 	"github.com/spf13/cobra"
 )
 
