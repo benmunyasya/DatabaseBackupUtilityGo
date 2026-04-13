@@ -1,12 +1,13 @@
 package main
 
 import (
-	"fmt"
-	"os"
-	"strconv"
-	"strings"
+    "os"
+    "strconv"
+    "strings"
+
     "github.com/benmunyasya/dbbackuputility/internal/db"
-	"github.com/spf13/cobra"
+    "github.com/benmunyasya/dbbackuputility/internal/log" //  import logging utility
+    "github.com/spf13/cobra"
 )
 
 var backupCmd = &cobra.Command{
@@ -16,22 +17,27 @@ var backupCmd = &cobra.Command{
     Run: func(cmd *cobra.Command, args []string) {
         dbType, _ := cmd.Flags().GetString("db")
         backupType, _ := cmd.Flags().GetString("type")
+        dbName, _ := cmd.Flags().GetString("db-name")
 
-        fmt.Printf("Running %s backup for %s database...\n", backupType, dbType)
+        log.Info("Running " + backupType + " backup for " + dbType + " database (" + dbName + ")...")
 
         adapter, err := db.GetAdapter(dbType)
         if err != nil {
-            fmt.Println("Error:", err)
+            log.Error("Adapter error: " + err.Error())
             return
         }
 
-        // Build env prefix (e.g., POSTGRES, MYSQL)
         prefix := strings.ToUpper(dbType)
 
-        port, err := strconv.Atoi(os.Getenv(prefix + "_DB_PORT"))
-        if err != nil {
-            fmt.Println("Invalid port:", err)
-            return
+        portStr := os.Getenv(prefix + "_DB_PORT")
+        port := 5432 // default for Postgres
+        if portStr != "" {
+            p, err := strconv.Atoi(portStr)
+            if err != nil {
+                log.Error("Invalid port: " + err.Error())
+                return
+            }
+            port = p
         }
 
         params := db.ConnectionParams{
@@ -39,30 +45,32 @@ var backupCmd = &cobra.Command{
             Port:     port,
             User:     os.Getenv(prefix + "_DB_USER"),
             Password: os.Getenv(prefix + "_DB_PASSWORD"),
-            Database: os.Getenv(prefix + "_DB_NAME"),
+            Database: dbName,
         }
 
         if err := adapter.Connect(params); err != nil {
-            fmt.Println("Connection failed:", err)
+            log.Error("Connection failed: " + err.Error())
             return
         }
 
         if err := adapter.TestConnection(); err != nil {
-            fmt.Println("Connection test failed:", err)
+            log.Warn("Connection test failed: " + err.Error())
             return
         }
 
         data, err := adapter.Dump(backupType)
         if err != nil {
-            fmt.Println("Backup failed:", err)
+            log.Error("Backup failed: " + err.Error())
             return
         }
 
-        fmt.Printf("Backup completed successfully. Data size: %d bytes\n", len(data))
+        log.Success("Backup completed successfully. File path: " + string(data))
     },
 }
 
 func init() {
     backupCmd.Flags().String("db", "postgres", "Database type (postgres, mysql, mongo, sqlite)")
     backupCmd.Flags().String("type", "full", "Backup type (full, incremental, differential)")
+    backupCmd.Flags().String("db-name", "", "Database name to back up")
+    backupCmd.MarkFlagRequired("db-name")
 }

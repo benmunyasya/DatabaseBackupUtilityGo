@@ -29,7 +29,7 @@ func (p *PostgresAdapter) Connect(params ConnectionParams) error {
 
     db, err := sql.Open("postgres", dsn)
     if err != nil {
-        return err
+        return fmt.Errorf("failed to open connection: %w", err)
     }
 
     p.conn = db
@@ -46,11 +46,13 @@ func (p *PostgresAdapter) TestConnection() error {
     if p.conn == nil {
         return fmt.Errorf("no active connection")
     }
-    return p.conn.Ping()
+    if err := p.conn.Ping(); err != nil {
+        return fmt.Errorf("connection ping failed: %w", err)
+    }
+    return nil
 }
 
 func (p *PostgresAdapter) Dump(backupType string) ([]byte, error) {
-    // Determine backup directory
     backupDir := os.Getenv("BACKUP_DIR")
     if backupDir == "" {
         backupDir = "./backups"
@@ -59,12 +61,10 @@ func (p *PostgresAdapter) Dump(backupType string) ([]byte, error) {
         return nil, fmt.Errorf("failed to create backup directory: %w", err)
     }
 
-    // Timestamped file name
     timestamp := time.Now().Format("20060102_150405")
     fileName := fmt.Sprintf("%s_%s_%s_backup.sql", p.database, backupType, timestamp)
     fullPath := filepath.Join(backupDir, fileName)
 
-    // Run pg_dump
     cmd := exec.Command("pg_dump",
         "-h", p.host,
         "-p", fmt.Sprintf("%d", p.port),
@@ -75,16 +75,14 @@ func (p *PostgresAdapter) Dump(backupType string) ([]byte, error) {
     cmd.Env = append(os.Environ(), "PGPASSWORD="+p.password)
 
     if err := cmd.Run(); err != nil {
-        return nil, err
+        return nil, fmt.Errorf("pg_dump failed for database %s: %w", p.database, err)
     }
 
-    // Compress to .gz
     compressedFile := fullPath + ".gz"
     if err := compressFile(fullPath, compressedFile); err != nil {
-        return nil, err
+        return nil, fmt.Errorf("compression failed for %s: %w", fullPath, err)
     }
 
-    // Optionally remove raw .sql
     _ = os.Remove(fullPath)
 
     return []byte(compressedFile), nil
@@ -93,11 +91,10 @@ func (p *PostgresAdapter) Dump(backupType string) ([]byte, error) {
 func (p *PostgresAdapter) Restore(data []byte) error {
     fileName := string(data)
 
-    // If file is gzipped, decompress first
     if strings.HasSuffix(fileName, ".gz") {
         decompressedFile := strings.TrimSuffix(fileName, ".gz")
         if err := decompressFile(fileName, decompressedFile); err != nil {
-            return err
+            return fmt.Errorf("failed to decompress backup file %s: %w", fileName, err)
         }
         fileName = decompressedFile
     }
@@ -112,7 +109,7 @@ func (p *PostgresAdapter) Restore(data []byte) error {
     cmd.Env = append(os.Environ(), "PGPASSWORD="+p.password)
 
     if err := cmd.Run(); err != nil {
-        return err
+        return fmt.Errorf("psql restore failed for database %s: %w", p.database, err)
     }
 
     return nil
@@ -122,43 +119,47 @@ func (p *PostgresAdapter) Restore(data []byte) error {
 func compressFile(src, dst string) error {
     inFile, err := os.Open(src)
     if err != nil {
-        return err
+        return fmt.Errorf("failed to open source file %s: %w", src, err)
     }
     defer inFile.Close()
 
     outFile, err := os.Create(dst)
     if err != nil {
-        return err
+        return fmt.Errorf("failed to create destination file %s: %w", dst, err)
     }
     defer outFile.Close()
 
     writer := gzip.NewWriter(outFile)
     defer writer.Close()
 
-    _, err = io.Copy(writer, inFile)
-    return err
+    if _, err = io.Copy(writer, inFile); err != nil {
+        return fmt.Errorf("failed to compress file %s: %w", src, err)
+    }
+    return nil
 }
 
 // Helper: decompress a gzip file
 func decompressFile(src, dst string) error {
     inFile, err := os.Open(src)
     if err != nil {
-        return err
+        return fmt.Errorf("failed to open compressed file %s: %w", src, err)
     }
     defer inFile.Close()
 
     reader, err := gzip.NewReader(inFile)
     if err != nil {
-        return err
+        return fmt.Errorf("failed to create gzip reader for %s: %w", src, err)
     }
     defer reader.Close()
 
     outFile, err := os.Create(dst)
     if err != nil {
-        return err
+        return fmt.Errorf("failed to create destination file %s: %w", dst, err)
     }
     defer outFile.Close()
 
-    _, err = io.Copy(outFile, reader)
-    return err
+    if _, err = io.Copy(outFile, reader); err != nil {
+        return fmt.Errorf("failed to decompress file %s: %w", src, err)
+    }
+    return nil
 }

@@ -1,8 +1,7 @@
 package main
 
 import (
-    "fmt"
-
+    "github.com/benmunyasya/dbbackuputility/internal/log" // 👈 import logging utility
     "github.com/spf13/cobra"
 )
 
@@ -15,13 +14,13 @@ var configCmd = &cobra.Command{
 
         switch action {
         case "view":
-            fmt.Println("Displaying current configuration (placeholder)...")
+            log.Info("Displaying current configuration (placeholder)...")
         case "set":
             key, _ := cmd.Flags().GetString("key")
             value, _ := cmd.Flags().GetString("value")
-            fmt.Printf("Setting config %s = %s (placeholder)...\n", key, value)
+            log.Success("Setting config " + key + " = " + value + " (placeholder)...")
         default:
-            fmt.Println("Invalid action. Use --action view or --action set.")
+            log.Error("Invalid action. Use --action view or --action set.")
         }
     },
 }

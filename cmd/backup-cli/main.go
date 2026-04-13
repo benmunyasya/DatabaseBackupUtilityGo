@@ -1,9 +1,9 @@
 package main
 
 import (
-    "fmt"
     "os"
 
+    "github.com/benmunyasya/dbbackuputility/internal/log" // import logging utility
     "github.com/spf13/cobra"
 )
 
@@ -16,12 +16,12 @@ func main() {
 
     // Add subcommands
     rootCmd.AddCommand(backupCmd)
-	rootCmd.AddCommand(restoreCmd)
-	rootCmd.AddCommand(scheduleCmd)
-	    rootCmd.AddCommand(configCmd)
+    rootCmd.AddCommand(restoreCmd)
+    rootCmd.AddCommand(scheduleCmd)
+    rootCmd.AddCommand(configCmd)
 
     if err := rootCmd.Execute(); err != nil {
-        fmt.Println(err)
+        log.Error("Command execution failed: " + err.Error())
         os.Exit(1)
     }
 }

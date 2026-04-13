@@ -1,8 +1,7 @@
 package main
 
 import (
-    "fmt"
-
+    "github.com/benmunyasya/dbbackuputility/internal/log" // 👈 import logging utility
     "github.com/spf13/cobra"
 )
 
@@ -14,10 +13,10 @@ var scheduleCmd = &cobra.Command{
         interval, _ := cmd.Flags().GetString("interval")
         dbType, _ := cmd.Flags().GetString("db")
 
-        fmt.Printf("Scheduling backups for %s database every %s...\n", dbType, interval)
-
+        log.Info("Scheduling backups for " + dbType + " database every " + interval + "...")
+        
         // Placeholder: later we’ll call Scheduler service here
-        fmt.Println("Schedule created successfully (placeholder).")
+        log.Success("Schedule created successfully (placeholder).")
     },
 }
 
