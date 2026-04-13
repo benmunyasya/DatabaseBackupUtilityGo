@@ -7,6 +7,9 @@
 
 # Test binary, built with `go test -c`
 *.test
+# Backup folder
+backup/
+backups/
 
 # Output of `go build`
 *.out
