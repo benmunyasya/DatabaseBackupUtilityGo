@@ -1,7 +1,7 @@
 package main
 
 import (
-    "github.com/benmunyasya/dbbackuputility/internal/log" // 👈 import logging utility
+    "github.com/benmunyasya/dbbackuputility/internal/log"
     "github.com/spf13/cobra"
 )
 
