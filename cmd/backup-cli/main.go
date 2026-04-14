@@ -3,6 +3,8 @@ package main
 
 import (
     "os"
+    "os/signal"
+    "syscall"
     "database/sql"
 
     "github.com/benmunyasya/dbbackuputility/internal/log"
@@ -39,8 +41,14 @@ func main() {
     sm := scheduler.NewScheduleManager(sqlite)
     _ = sm.StartScheduler() // load persisted jobs
 
+    // Execute CLI commands
     if err := rootCmd.Execute(); err != nil {
         log.Error("Command execution failed: " + err.Error())
         os.Exit(1)
     }
+
+    // Block until interrupt so cron jobs keep running
+    sig := make(chan os.Signal, 1)
+    signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+    <-sig
 }
