@@ -10,6 +10,8 @@
 # Backup folder
 backup/
 backups/
+# Ignore Google service account credentials
+dbbackuputility-5fe335e3893a.json
 
 
 # Output of `go build`
